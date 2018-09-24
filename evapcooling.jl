@@ -10,7 +10,7 @@ p = 1 #Air pressure in atm
 p = p*101325 #convert air pressure to Pa
 rh_inf = 0 #Relative Humidity of air
 v = 10 #Air speed in m/s
-a = 1 #Surface area of object in crossflow, m^2
+a_s = 1 #Surface area of object in crossflow, m^2
 l = 1 #Surface characteristic lenth, m
 D_ab = 0.26E-4 #Water-Air Diffusivity, m^2/s
 M_a = 18.015 #Molar mass of water, kg/kmol
@@ -40,17 +40,22 @@ viscosity = CP.HAPropsSI("Visc","T",T_inf,"P",p,"R",rh_inf) #Compute the dynamic
 Re = v*l/viscosity #Calculate the reynolds number of air
 Pr = viscosity/alpha #Calculate the prandtl number
 Nu = 0.43*(Re^0.58)*(Pr^0.4) #Calculate the nusselt number, this is geometry dependent
+Sh = Nu #The sherwood number is the nussselt number, heat and mass transfer analogy
 
-#Compute the heat transfer coefficient
-k_water =  CP.PropsSI("conductivity","T",T_inf,"P",p,"Water") #Thermal conductivity of water W/m/k
-h = k_water*Nu/l #Heat transfer coefficient (W/m^2-K)
+h_m = Sh*(D_ab/l) #Compute the mass transfer coefficient, m/s
+Sc = viscosity/D_ab #Compute the smith number
+rho_air_s = CP.PropsSI("D","T",T_0,"P",p,"Air") #Compute the air density at the surface (kg/m^3)
 
-function temp_vs_time(temp, time) #Function to tell us temperature at each time step
-    dTdt = [1.0] #initialize with some value
-    dTdt[1] = -6.0*(h*(temp[1]-T_inf))/(rho_air*cp_air*l) #change in temperature at each time step, taking the derivative of final_time function
-    return dTdt
+
+# k_water =  CP.PropsSI("conductivity","T",T_inf,"P",p,"Water") #Thermal conductivity of water W/m/k
+ #h = k_water*Nu/l #Heat transfer coefficient (W/m^2-K)
+
+function mass_vs_time(mass, time) #Function to tell us water mass at each time step
+    dMdt = [1.0] #initialize with some value
+    dMdt[1] = 0-mass[1]/(h_m*a_s*(rho_air_s-rho_air))  #change in mass at each time step
+    return dMdt
 end
 times = 0:2:100 #go from 0 by 2's to 100 seconds
-sol_t = int.odeint(temp_vs_time, T_0, times)
+sol_t = int.odeint(mass_vs_time, m_0, times)
 
 plot(sol_t)
