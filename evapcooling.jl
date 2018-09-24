@@ -16,8 +16,8 @@ D_ab = 0.26E-4 #Water-Air Diffusivity, m^2/s
 M_a = 18.015 #Molar mass of water, kg/kmol
 h_fg = 2256 #Enthalpy of vaporization of water, kj/kg
 R = 8.3143 #Universal gas constant, kj/kmol*K
-m_0 = 1 #initial water mass, kg
-T_0 = 275 #initial sphere temperature
+m_0 = 1 #initial water mass, kg #Assumption for part B
+T_0 = 275 #initial sphere temperature, K  #Assumption for part B
 
 
 #A) Calculate the steady-state temperature for the water surface.
@@ -35,13 +35,22 @@ B = (M_a*h_fg*p)/(R*rho_air*cp_air*Le^2/3) #Compute the coefficient B (K^2) (see
 T_ss = (T_inf + sqrt((T_inf^2)-(4*B)))/2 #Compute the steady state temperature of the sphere
 print(T_ss)
 
+#B) Plot the water surface temperature as a function of time
 viscosity = CP.HAPropsSI("Visc","T",T_inf,"P",p,"R",rh_inf) #Compute the dynamic viscosity of air (Pa-s)
 Re = v*l/viscosity #Calculate the reynolds number of air
 Pr = viscosity/alpha #Calculate the prandtl number
 Nu = 0.43*(Re^0.58)*(Pr^0.4) #Calculate the nusselt number, this is geometry dependent
 
 #Compute the heat transfer coefficient
-rho_water = CP.PropsSI("D","T",T_inf,"P",p_inf,"Water") #Density of water
-cp_water =  CP.PropsSI("CPMASS","T",T_inf,"P",p_inf,"Water") #CP of water
-k = alpha*rho_water*cp_water   #Thermal conductivity of the object W/m-K
-h = k*Nu/l #Heat transfer coefficient (W/m^2-K)
+k_water =  CP.PropsSI("conductivity","T",T_inf,"P",p,"Water") #Thermal conductivity of water W/m/k
+h = k_water*Nu/l #Heat transfer coefficient (W/m^2-K)
+
+function temp_vs_time(temp, time) #Function to tell us temperature at each time step
+    dTdt = [1.0] #initialize with some value
+    dTdt[1] = -6.0*(h*(temp[1]-T_inf))/(rho_air*cp_air*l) #change in temperature at each time step, taking the derivative of final_time function
+    return dTdt
+end
+times = 0:2:100 #go from 0 by 2's to 100 seconds
+sol_t = int.odeint(temp_vs_time, T_0, times)
+
+plot(sol_t)
