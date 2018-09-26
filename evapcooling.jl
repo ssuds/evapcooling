@@ -76,4 +76,41 @@ plot(sol_m,
     ylabel = "Mass (kg)",
     xlabel = "Time (s)")
 
-mean(sol_t[2])
+# Part C
+
+#Calculate using steady state water temprature
+rho_air = CP.PropsSI("D","T",T_ss,"Q",1,"Water") #Compute the air density (kg/m^3)
+cp_air = CP.HAPropsSI("cp","T",T_ss,"P",p,"R",rh_inf) #Compute the specific heat capacity of air (J/kg dry air/K)
+cp_air = cp_air/1000 #convert to kJ/kg-K
+k_air = CP.PropsSI("conductivity","T",T_ss,"P",p,"Air") #Compute the air thermal conductivity (W/m/K)
+alpha = k_air/(rho_air*cp_air) #Compute the thermal diffusivity (m^2/s)
+Le = alpha/D_ab #compute lewis number
+#Steady state temperature is reqched when heat transfer in from convection equals heat transfer out from evaporative cooling
+B = (M_a*h_fg*p)/(R*rho_air*cp_air*Le^2/3) #Compute the coefficient B (K^2) (see Incropera example 6.8)
+T_ss_ss = (T_0 + sqrt((T_0^2)-(4*B)))/2 #Compute the steady state temperature of the sphere
+
+
+T_average = mean(sol_t[2])
+
+rho_air = CP.PropsSI("D","T",T_average,"Q",1,"Water") #Compute the air density (kg/m^3)
+cp_air = CP.HAPropsSI("cp","T",T_average,"P",p,"R",rh_inf) #Compute the specific heat capacity of air (J/kg dry air/K)
+cp_air = cp_air/1000 #convert to kJ/kg-K
+k_air = CP.PropsSI("conductivity","T",T_average,"P",p,"Air") #Compute the air thermal conductivity (W/m/K)
+alpha = k_air/(rho_air*cp_air) #Compute the thermal diffusivity (m^2/s)
+Le = alpha/D_ab #compute lewis number
+#Steady state temperature is reqched when heat transfer in from convection equals heat transfer out from evaporative cooling
+B = (M_a*h_fg*p)/(R*rho_air*cp_air*Le^2/3) #Compute the coefficient B (K^2) (see Incropera example 6.8)
+T_ss_average = (T_0 + sqrt((T_0^2)-(4*B)))/2 #Compute the steady state temperature of the sphere
+
+
+error_initial = (T_ss-T_ss_average)/T_ss_average
+error_ss = (T_ss-T_ss_average)/T_ss_average
+error_average = (T_ss_average-T_ss_average)/T_ss_average
+
+print(T_ss) #Steady state temperature using initial temperature
+print(T_ss_ss) #Steady state temperature using steady state temperature properties
+print(T_ss_average) #Steady state temperature using average temperature properties
+
+print(error_initial)
+print(error_ss)
+print(error_average)
