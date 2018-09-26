@@ -1,5 +1,6 @@
 using PyCall
 using Plots
+using Statistics
 @pyimport scipy.optimize as opt
 @pyimport scipy.integrate as int
 @pyimport CoolProp.CoolProp as CP
@@ -24,15 +25,15 @@ T_0 = 275 #initial sphere temperature, K  #Assumption for part B
 
 
 #Find relevant properties
-rho_air = CP.PropsSI("D","T",T_inf,"P",p,"Air") #Compute the air density (kg/m^3)
-cp_air = CP.HAPropsSI("cp","T",T_inf,"P",p,"R",rh_inf) #Compute the specific heat capacity of air (J/kg dry air/K)
+rho_air = CP.PropsSI("D","T",T_0,"Q",1,"Water") #Compute the air density (kg/m^3)
+cp_air = CP.HAPropsSI("cp","T",T_0,"P",p,"R",rh_inf) #Compute the specific heat capacity of air (J/kg dry air/K)
 cp_air = cp_air/1000 #convert to kJ/kg-K
-k_air = CP.PropsSI("conductivity","T",T_inf,"P",p,"Air") #Compute the air thermal conductivity (W/m/K)
+k_air = CP.PropsSI("conductivity","T",T_0,"P",p,"Air") #Compute the air thermal conductivity (W/m/K)
 alpha = k_air/(rho_air*cp_air) #Compute the thermal diffusivity (m^2/s)
 Le = alpha/D_ab #compute lewis number
 #Steady state temperature is reqched when heat transfer in from convection equals heat transfer out from evaporative cooling
 B = (M_a*h_fg*p)/(R*rho_air*cp_air*Le^2/3) #Compute the coefficient B (K^2) (see Incropera example 6.8)
-T_ss = (T_inf + sqrt((T_inf^2)-(4*B)))/2 #Compute the steady state temperature of the sphere
+T_ss = (T_0 + sqrt((T_0^2)-(4*B)))/2 #Compute the steady state temperature of the sphere
 print(T_ss)
 
 #B) Plot the water surface temperature as a function of time
@@ -44,18 +45,35 @@ Sh = Nu #The sherwood number is the nussselt number, heat and mass transfer anal
 
 h_m = Sh*(D_ab/l) #Compute the mass transfer coefficient, m/s
 Sc = viscosity/D_ab #Compute the smith number
-rho_air_s = CP.PropsSI("D","T",T_0,"P",p,"Air") #Compute the air density at the surface (kg/m^3)
 
 
-# k_water =  CP.PropsSI("conductivity","T",T_inf,"P",p,"Water") #Thermal conductivity of water W/m/k
- #h = k_water*Nu/l #Heat transfer coefficient (W/m^2-K)
+
+ function temp_vs_time(temp, time) #Function to tell us temperature at each time step
+     dTdt = [1.0] #initialize with some value
+     rho_air_s = CP.PropsSI("D","T",temp[1],"Q",1,"Water") #Compute the air density at the surface (kg/m^3)
+     dTdt[1] = -6.0*(h_m*(temp[1]-T_inf))/(rho_air_s*cp_air*l) #change in temperature at each time step, taking the derivative of final_time function
+     return dTdt
+ end
+
+ times = 0:2:100 #go from 0 by 2's to 100 seconds
+ sol_t = int.odeint(temp_vs_time, T_0, times)
+
+ plot(sol_t,
+    ylabel = "Temperature (K)",
+    xlabel = "Time (s)")
+print(sol_t)
 
 function mass_vs_time(mass, time) #Function to tell us water mass at each time step
     dMdt = [1.0] #initialize with some value
-    dMdt[1] = 0-mass[1]/(h_m*a_s*(rho_air_s-rho_air))  #change in mass at each time step
+    rho_air_s = CP.PropsSI("D","T",sol_t[2],"Q",1,"Water") #Compute the air density at the surface (kg/m^3)
+    dMdt[1] = -h_m*a_s*(rho_air_s-rho_air)  #change in mass at each time step
     return dMdt
 end
 times = 0:2:100 #go from 0 by 2's to 100 seconds
-sol_t = int.odeint(mass_vs_time, m_0, times)
+sol_m = int.odeint(mass_vs_time, m_0, times)
 
-plot(sol_t)
+plot(sol_m,
+    ylabel = "Mass (kg)",
+    xlabel = "Time (s)")
+
+mean(sol_t[2])
